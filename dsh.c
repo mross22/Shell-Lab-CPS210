@@ -9,6 +9,8 @@
 
 #include "dsh.h"
 
+enum{ max_num_jobs = 20};
+
 int isspace(int c);
 
 /* Keep track of attributes of the shell.  */
@@ -25,6 +27,8 @@ int job_is_completed(job_t *j);
 bool free_job(job_t *j);
 
 char prompt_pid[32];
+
+job_t* jobs[max_num_jobs] = {NULL};
 
 /* Initializing the header for the job list. The active jobs are linked into a list. */
 job_t *first_job = NULL;
