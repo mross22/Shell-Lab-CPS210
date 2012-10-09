@@ -642,18 +642,18 @@ bool invokefree(job_t *j, char *msg){
 					continue;
 				}
 
-				fprintf(stdout,"cmd: %s\t", p->argv[0]);
-				int i;
-				for(i = 1; i < p->argc; i++) 
-					fprintf(stdout, "%s ", p->argv[i]);
-				fprintf(stdout, "\n");
+		//		fprintf(stdout,"cmd: %s\t", p->argv[0]);
+		//		int i;
+		//		for(i = 1; i < p->argc; i++) 
+		//			fprintf(stdout, "%s ", p->argv[i]);
+		//		fprintf(stdout, "\n");
 			}
-			if(j->bg) fprintf(stdout, "Background job\n");	
-			else fprintf(stdout, "Foreground job\n");	
-			if(j->mystdin == INPUT_FD)
-				fprintf(stdout, "Input file name: %s\n", j->ifile);
-			if(j->mystdout == OUTPUT_FD)
-				fprintf(stdout, "Output file name: %s\n", j->ofile);
+		//	if(j->bg) fprintf(stdout, "Background job\n");	
+		//	else fprintf(stdout, "Foreground job\n");	
+		//	if(j->mystdin == INPUT_FD)
+		//		fprintf(stdout, "Input file name: %s\n", j->ifile);
+		//	if(j->mystdout == OUTPUT_FD)
+		//		fprintf(stdout, "Output file name: %s\n", j->ofile);
 		
 			/* If not built-in */
 			/* If job j runs in foreground */
