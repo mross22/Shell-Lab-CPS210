@@ -599,7 +599,7 @@ bool invokefree(job_t *j, char *msg){
 		job_t *j;
 		process_t *p;
 		for(j = first_job; j; j = j->next) {
-			fprintf(stdout, "job: %s\n", j->commandinfo);
+			//fprintf(stdout, "job: %s\n", j->commandinfo);
 			for(p = j->first_process; p; p = p->next) {
 				if(strcmp(p->argv[0], "jobs") == 0){
 					job_t *j2;
