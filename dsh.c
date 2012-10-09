@@ -621,10 +621,17 @@ bool invokefree(job_t *j, char *msg){
 					
 					continue;
 				}
-				else if(strcmp(p->argv[0], "fg") == 0){
+				else if(strcmp(p->argv[0], "fg") == 0){ 
+					tcsetpgrp (shell_terminal, j->pgid); 
+//					wait_for_job (j); 
+
+					tcsetpgrp (shell_terminal, shell_pgid);
+				       	tcgetattr (shell_terminal, &j->tmodes);
+				       	tcsetattr (shell_terminal, TCSADRAIN, &shell_tmodes); 					
 					continue;
 				}
-				else if(strcmp(p->argv[0], "bg") == 0){
+				else if(strcmp(p->argv[0], "bg") == 0){ 
+					j->bg = true; 						
 					continue;
 				}
 				else if(strcmp(p->argv[0], "cd") == 0){
