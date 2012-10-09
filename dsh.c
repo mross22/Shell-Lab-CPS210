@@ -599,76 +599,78 @@ bool invokefree(job_t *j, char *msg){
 		job_t *j;
 		process_t *p;
 		for(j = first_job; j; j = j->next) {
-			//fprintf(stdout, "job: %s\n", j->commandinfo);
-			for(p = j->first_process; p; p = p->next) {
-				if(strcmp(p->argv[0], "jobs") == 0){
-					job_t *j2;
-					int num = 1;
-					for(j2 = first_job; j2; j2 = j2->next) {
-						fprintf(stdout, "[%d]+ \t",j2->pgid);
-						// If all jobs are completed
-						if(job_is_completed(j2)){
-							fprintf(stdout, "Done");
-							free_job(j2);
-						}
-						// If all jobs are completed or stopped (thus if there are jobs that are stopped & not completed
-						else if(job_is_stopped(j2)){
-							fprintf(stdout, "Some stopped jobs");
-						}
-						else{
-							fprintf(stdout, "Running");
-						}
+			if(j->pgid < 0){
+				//fprintf(stdout, "job: %s\n", j->commandinfo);
+				for(p = j->first_process; p; p = p->next) {
+					if(strcmp(p->argv[0], "jobs") == 0){
+						job_t *j2;
+						int num = 1;
+						for(j2 = first_job; j2; j2 = j2->next) {
+							fprintf(stdout, "[%d]+ \t",j2->pgid);
+							// If all jobs are completed
+							if(job_is_completed(j2)){
+								fprintf(stdout, "Done");
+								free_job(j2);
+							}
+							// If all jobs are completed or stopped (thus if there are jobs that are stopped & not completed
+							else if(job_is_stopped(j2)){
+								fprintf(stdout, "Some stopped jobs");
+							}
+							else{
+								fprintf(stdout, "Running");
+							}
 
-						fprintf(stdout, "\t\t %s\n", j2->commandinfo);
-						num++;
+							fprintf(stdout, "\t\t %s\n", j2->commandinfo);
+							num++;
+						}
+						
+						continue;
 					}
-					
-					continue;
-				}
-				else if(strcmp(p->argv[0], "fg") == 0){ 
-					tcsetpgrp (shell_terminal, j->pgid); 
-//					wait_for_job (j); 
+					else if(strcmp(p->argv[0], "fg") == 0){ 
+						tcsetpgrp (shell_terminal, j->pgid); 
+	//					wait_for_job (j); 
 
-					tcsetpgrp (shell_terminal, shell_pgid);
-				       	tcgetattr (shell_terminal, &j->tmodes);
-				       	tcsetattr (shell_terminal, TCSADRAIN, &shell_tmodes); 					
-					continue;
-				}
-				else if(strcmp(p->argv[0], "bg") == 0){ 
-					j->bg = true; 						
-					continue;
-				}
-				else if(strcmp(p->argv[0], "cd") == 0){
-					continue;
-				}
+						tcsetpgrp (shell_terminal, shell_pgid);
+						tcgetattr (shell_terminal, &j->tmodes);
+						tcsetattr (shell_terminal, TCSADRAIN, &shell_tmodes); 					
+						continue;
+					}
+					else if(strcmp(p->argv[0], "bg") == 0){ 
+						j->bg = true; 						
+						continue;
+					}
+					else if(strcmp(p->argv[0], "cd") == 0){
+						continue;
+					}
 
-		//		fprintf(stdout,"cmd: %s\t", p->argv[0]);
-		//		int i;
-		//		for(i = 1; i < p->argc; i++) 
-		//			fprintf(stdout, "%s ", p->argv[i]);
-		//		fprintf(stdout, "\n");
-			}
-		//	if(j->bg) fprintf(stdout, "Background job\n");	
-		//	else fprintf(stdout, "Foreground job\n");	
-		//	if(j->mystdin == INPUT_FD)
-		//		fprintf(stdout, "Input file name: %s\n", j->ifile);
-		//	if(j->mystdout == OUTPUT_FD)
-		//		fprintf(stdout, "Output file name: %s\n", j->ofile);
-		
-			/* If not built-in */
-			/* If job j runs in foreground */
-			/* spawn_job(j,true) */
-			/* else */
-			/* spawn_job(j,false) */
+			//		fprintf(stdout,"cmd: %s\t", p->argv[0]);
+			//		int i;
+			//		for(i = 1; i < p->argc; i++) 
+			//			fprintf(stdout, "%s ", p->argv[i]);
+			//		fprintf(stdout, "\n");
+				}
+			//	if(j->bg) fprintf(stdout, "Background job\n");	
+			//	else fprintf(stdout, "Foreground job\n");	
+			//	if(j->mystdin == INPUT_FD)
+			//		fprintf(stdout, "Input file name: %s\n", j->ifile);
+			//	if(j->mystdout == OUTPUT_FD)
+			//		fprintf(stdout, "Output file name: %s\n", j->ofile);
+			
+				/* If not built-in */
+				/* If job j runs in foreground */
+				/* spawn_job(j,true) */
+				/* else */
+				/* spawn_job(j,false) */
 
-			// If running in the background
-			if(j->bg){
-				spawn_job(j, false);
-			}
-			// If running in the foreground
-			else{
-				spawn_job(j, true);
-			}
+				// If running in the background
+				if(j->bg){
+					spawn_job(j, false);
+				}
+				// If running in the foreground
+				else{
+					spawn_job(j, true);
+				}
+			}	
 		}
 	}
 }
