@@ -156,7 +156,7 @@ void spawn_job(job_t *j, bool fg) {
 
 	pid_t pid;
 	process_t *p;
-	int *status;	
+	int status;	
 
 	//int mypipe[2];  infile,outfile,input, output;
 
@@ -239,25 +239,24 @@ void spawn_job(job_t *j, bool fg) {
 				close(input);
 			}
 			if(output != 1){
-				dup2(output, 1);
+				dup2(ouetpgrp (shell_terminal, shell_pgid);put, 1);
 				close(output);
 			}	
 			*/
 
 			/* execute the command through exec_ call */
-			execvp(p->argv[0], p->argv);
-			perror("execvp");
+			fprintf(stdout, "Exec: %s", p->argv[0]); 
+			execve(p->argv[0], p->argv, NULL);
+			perror("execve");
 			exit(1);
 
 		   default: /* parent */
 			/* establish child process group here to avoid race
 			* conditions. */
 			p->pid = pid;
-			if(shell_is_interactive){
 			if (j->pgid <= 0)
 				j->pgid = pid;
 			setpgid(pid, j->pgid);
-			}
 		}
 
 		/* Reset file IOs if necessary */
@@ -274,10 +273,12 @@ void spawn_job(job_t *j, bool fg) {
 
 		if(fg){
 			/* Wait for the job to complete */
-			waitpid(pid, status, 0);
+			waitpid(pid, &status, 0);
+			tcsetpgrp(shell_terminal,shell_pgid); 
 		}
 		else {
 			/* Background job */
+			tcsetpgrp(shell_terminal, shell_pgid);
 		}
 	}
 }
