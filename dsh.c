@@ -261,6 +261,7 @@ void spawn_job(job_t *j, bool fg) {
 			if (j->pgid <= 0)
 				j->pgid = pid;
 			setpgid(pid, j->pgid);
+
 		}
 
 		/* Reset file IOs if necessary */
@@ -278,6 +279,21 @@ void spawn_job(job_t *j, bool fg) {
 		if(fg){
 			/* Wait for the job to complete */
 			waitpid(pid, &status, 0);
+			p->status = status; 
+			if(WIFSTOPPED (status))
+			{
+				p->stopped = 1; 
+			}
+			else
+			{
+				p->completed = 1; 
+				if(WIFSIGNALED (status))
+				{
+				fprintf (stderr, "%d: Terminated by signal %d.\n",
+								  (int) pid, WTERMSIG (p->status));
+				}
+			}
+			
 			tcsetpgrp(shell_terminal,shell_pgid); 
 		}
 		else {
@@ -624,7 +640,6 @@ bool invokefree(job_t *j, char *msg){
 					{
 						isBuiltIn = true; 
 						job_t *j2;
-						int num = 1;
 						for(j2 = first_job; j2; j2 = j2->next) {
 							// as long as the job you are processing is NOT this current 'jobs' command
 							if(j2 != j){
@@ -632,18 +647,18 @@ bool invokefree(job_t *j, char *msg){
 								// If all processes are completed
 								if(job_is_completed(j2)){
 									fprintf(stdout, "Done");
+									fprintf(stdout, "\t\t %s\n", j2->commandinfo);
 									free_job(j2);
 								}
 								// If all processes are completed or stopped (thus if there are jobs that are stopped & not completed
 								else if(job_is_stopped(j2)){
 									fprintf(stdout, "Some stopped jobs");
+									fprintf(stdout, "\t\t %s\n", j2->commandinfo);
 								}
 								else{
 									fprintf(stdout, "Running");
+									fprintf(stdout, "\t\t %s\n", j2->commandinfo);
 								}
-
-								fprintf(stdout, "\t\t %s\n", j2->commandinfo);
-								num++;
 							}
 							else{
 								// processing current jobs command
