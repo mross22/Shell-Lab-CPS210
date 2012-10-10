@@ -278,7 +278,26 @@ void spawn_job(job_t *j, bool fg) {
 
 		if(fg){
 			/* Wait for the job to complete */
+/*
 			waitpid(pid, &status, 0);
+			p->status = status; 
+			if(WIFSTOPPED (status))
+			{
+				p->stopped = 1; 
+			}
+			else
+			{
+				p->completed = 1; 
+				if(WIFSIGNALED (status))
+				{
+				fprintf (stderr, "%d: Terminated by signal %d.\n",
+								  (int) pid, WTERMSIG (p->status));
+				}
+			}
+			
+			tcsetpgrp(shell_terminal,shell_pgid); 
+*/
+			waitpid(pid, &status, WUNTRACED);
 			p->status = status; 
 			if(WIFSTOPPED (status))
 			{
@@ -298,10 +317,10 @@ void spawn_job(job_t *j, bool fg) {
 		}
 		else {
 			/* Background job */
-			tcsetpgrp(shell_terminal, shell_pgid);
 			
+			tcsetpgrp(shell_terminal, shell_pgid);
 			/* Wait for the job to complete */
-			waitpid(pid, &status, 0);
+			waitpid(pid, &status, WUNTRACED|WNOHANG);
 			p->status = status; 
 			if(WIFSTOPPED (status))
 			{
@@ -316,6 +335,7 @@ void spawn_job(job_t *j, bool fg) {
 								  (int) pid, WTERMSIG (p->status));
 				}
 			}
+
 		}
 	}
 }
