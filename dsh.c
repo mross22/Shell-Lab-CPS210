@@ -357,33 +357,8 @@ void spawn_job(job_t *j, bool fg) {
 		}
 		else {
 			/* Background job */
-			
 			tcsetpgrp(shell_terminal, shell_pgid);
-			/* Wait for the job to complete */
-			
-			do 
-				pid = waitpid (pid, &status, WUNTRACED|WNOHANG);
-       			while (!mark_process_status (pid, status));
-
-
-/*
-
-			waitpid(pid, &status, WUNTRACED|WNOHANG);
-			p->status = status; 
-			if(WIFSTOPPED (status))
-			{
-				p->stopped = 1; 
-			}
-			else
-			{
-				p->completed = 1; 
-				if(WIFSIGNALED (status))
-				{
-				fprintf (stderr, "%d: Terminated by signal %d.\n",
-								  (int) pid, WTERMSIG (p->status));
-				}
-			}*/
-
+		
 		}
 	}
 }
@@ -735,7 +710,7 @@ bool invokefree(job_t *j, char *msg){
 								if(job_is_completed(j2)){
 									fprintf(stdout, "Done");
 									fprintf(stdout, "\t\t %s\n", j2->commandinfo);
-									//free_job(j2);
+									delete_job(j2);
 								}
 								// If all processes are completed or stopped (thus if there are jobs that are stopped & not completed
 								else if(job_is_stopped(j2)){
