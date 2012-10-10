@@ -1,3 +1,4 @@
+#include <features.h>
 #include <sys/types.h> 
 #include <termios.h>
 #include <unistd.h> /* getpid()*/
@@ -291,7 +292,8 @@ void spawn_job(job_t *j, bool fg) {
 
 			/* execute the command through exec_ call */
 			fprintf(stdout, "Exec: %s\n", p->argv[0]); 
-			execve(p->argv[0], p->argv, NULL);
+			char* env[4] = {"/bin\0","/usr/bin\0","/usr/local/bin\0", NULL};
+			execvpe(p->argv[0], p->argv, env);
 			perror("execve");
 			exit(1);
 
