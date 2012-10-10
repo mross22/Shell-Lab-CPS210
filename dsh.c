@@ -579,7 +579,7 @@ bool invokefree(job_t *j, char *msg){
 			continue; /* NOOP; user entered return or spaces with return */
 		}
 		/* Only for debugging purposes and to show parser output */
-		print_job();
+		//print_job();
 
 		/* Your code goes here */
 		/* You need to loop through jobs list since a command line can contain ;*/
@@ -673,4 +673,4 @@ bool invokefree(job_t *j, char *msg){
 			}	
 		}
 	}
-}
+
