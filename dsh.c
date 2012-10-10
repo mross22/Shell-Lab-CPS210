@@ -352,7 +352,7 @@ bool invokefree(job_t *j, char *msg){
 	void print_job() {
 		job_t *j;
 		process_t *p;
-		for(j = first_job; j; j = j->next) {
+		for(j = first_job; j; j = j->next) {			
 			fprintf(stdout, "job: %s\n", j->commandinfo);
 			for(p = j->first_process; p; p = p->next) {
 				fprintf(stdout,"cmd: %s\t", p->argv[0]);
@@ -598,11 +598,15 @@ bool invokefree(job_t *j, char *msg){
 		//if(cur_job->commandinfo
 		job_t *j;
 		process_t *p;
+		bool isBuiltIn = false; 
 		for(j = first_job; j; j = j->next) {
-			if(j->pgid < 0){
+			if(j->pgid < 0)
+			{
 				//fprintf(stdout, "job: %s\n", j->commandinfo);
 				for(p = j->first_process; p; p = p->next) {
-					if(strcmp(p->argv[0], "jobs") == 0){
+					isBuiltIn = true; 					
+					if(strcmp(p->argv[0], "jobs") == 0)
+					{
 						job_t *j2;
 						int num = 1;
 						for(j2 = first_job; j2; j2 = j2->next) {
@@ -642,7 +646,7 @@ bool invokefree(job_t *j, char *msg){
 					else if(strcmp(p->argv[0], "cd") == 0){
 						continue;
 					}
-
+					isBuiltIn = false; 
 			//		fprintf(stdout,"cmd: %s\t", p->argv[0]);
 			//		int i;
 			//		for(i = 1; i < p->argc; i++) 
@@ -663,12 +667,15 @@ bool invokefree(job_t *j, char *msg){
 				/* spawn_job(j,false) */
 
 				// If running in the background
+				if(!isBuiltIn)
+				{
 				if(j->bg){
 					spawn_job(j, false);
 				}
 				// If running in the foreground
 				else{
 					spawn_job(j, true);
+				}
 				}
 			}	
 		}
