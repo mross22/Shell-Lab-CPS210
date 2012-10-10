@@ -162,7 +162,7 @@ void spawn_job(job_t *j, bool fg) {
 	process_t *p;
 	int status;	
 
-	//int mypipe[2];  infile,outfile,input, output;
+	int mypipe[2], infile, outfile;
 
 	/* Check for input/output redirection; If present, set the IO descriptors 
 	 * to the appropriate files given by the user 
@@ -202,18 +202,20 @@ void spawn_job(job_t *j, bool fg) {
 	// each process has its own file table, thus when you call dup2 inside a process, you 
 	// overwrite a mapping for that process only, thus call dup2 while inside the child to redirect
 	// output for pipes and when you fork the final process, redirect to the overall output file
-
+	infile = j->mystdin;
 	for(p = j->first_process; p; p = p->next) {
 		// Set up pipes if necessary
-		/*if(p->next){
+		if(p->next){
 			if(pipe(mypipe) < 0){
 				perror("pipe");
 				exit(1);
 			}
 			
-			output = mypipe[1];
+			outfile = mypipe[1];
 		}
-		*/
+		else
+			outfile = j->mystdout;
+		
 		switch (pid = fork()) {
 
 		   case -1: /* fork failure */
@@ -237,16 +239,15 @@ void spawn_job(job_t *j, bool fg) {
 			signal(SIGTTOU, SIG_DFL);
 
 			// Set-up appropriate I/O
-			/*if(input != 0)
+			if(infile != j->mystdin)
 			{
-				dup2(input, 0);
-				close(input);
+				dup2(infile, j->mystdin);
+				close(infile);
 			}
-			if(output != 1){
-				dup2(ouetpgrp (shell_terminal, shell_pgid);put, 1);
-				close(output);
+			if(outfile != j->mystdout){
+				dup2(outfile, j->mystdout);
+				close(outfile);
 			}	
-			*/
 
 			/* execute the command through exec_ call */
 			fprintf(stdout, "Exec: %s\n", p->argv[0]); 
@@ -266,15 +267,14 @@ void spawn_job(job_t *j, bool fg) {
 
 		/* Reset file IOs if necessary */
 		// Clean up pipes
-		/*
-		if(input != j->mystdin){
+		if(infile != j->mystdin){
 			close(infile);
 		}
-		if(output != j->mystdout){
+		if(outfile != j->mystdout){
 			close(outfile);
 		}
 		infile = mypipe[0];
-		*/
+		
 
 		if(fg){
 			/* Wait for the job to complete */
@@ -675,6 +675,8 @@ bool invokefree(job_t *j, char *msg){
 					{
 						isBuiltIn = true; 
 						job_t *j2;
+						job_t* jobs_to_delete[max_num_jobs] = {NULL};
+						int num = 0;
 						for(j2 = first_job; j2; j2 = j2->next) {
 							// as long as the job you are processing is NOT this current 'jobs' command
 							if(j2 != j){
@@ -683,7 +685,7 @@ bool invokefree(job_t *j, char *msg){
 								if(job_is_completed(j2)){
 									fprintf(stdout, "Done");
 									fprintf(stdout, "\t\t %s\n", j2->commandinfo);
-									delete_job(j2);
+									jobs_to_delete[num] = j2;
 								}
 								// If all processes are completed or stopped (thus if there are jobs that are stopped & not completed
 								else if(job_is_stopped(j2)){
@@ -698,8 +700,17 @@ bool invokefree(job_t *j, char *msg){
 							else{
 								// processing current jobs command
 								jobs_job = j;
-							}							
+							}
+							num++;							
 						} 
+						// delete all the jobs that have completed
+						int i;
+						for(i=0;i<max_num_jobs;i++){
+							if(jobs_to_delete[i] != NULL){
+								delete_job(jobs_to_delete[i]);
+							}
+						}
+
 						break;
 					}
 					else if(strcmp(p->argv[0], "fg") == 0){ 
