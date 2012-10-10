@@ -146,6 +146,45 @@ void continue_job(job_t *j) {
 }
 
 
+int
+     mark_process_status (pid_t pid, int status)
+     {
+       job_t *j;
+       process_t *p;
+     
+       if (pid > 0)
+         {
+           /* Update the record for the process.  */
+           for (j = first_job; j; j = j->next)
+             for (p = j->first_process; p; p = p->next)
+               if (p->pid == pid)
+                 {
+                   p->status = status;
+                   if (WIFSTOPPED (status))
+                     p->stopped = 1;
+                   else
+                     {
+                       p->completed = 1;
+                       if (WIFSIGNALED (status))
+                         fprintf (stderr, "%d: Terminated by signal %d.\n",
+                                  (int) pid, WTERMSIG (p->status));
+                     }
+                   return 0;
+                  }
+           fprintf (stderr, "No child process %d.\n", pid);
+           return -1;
+         }
+       else if (pid == 0 || errno == ECHILD)
+         /* No processes ready to report.  */
+         return -1;
+       else {
+         /* Other weird errors.  */
+         perror ("waitpid");
+         return -1;
+       }
+     }
+
+
 /* Spawning a process with job control. fg is true if the 
  * newly-created process is to be placed in the foreground. 
  * (This implicitly puts the calling process in the background, 
@@ -155,6 +194,7 @@ void continue_job(job_t *j) {
  * pgid: this feature is used to start the second or 
  * subsequent processes in a pipeline.
  * */
+
 
 void spawn_job(job_t *j, bool fg) {
 
@@ -318,25 +358,12 @@ void spawn_job(job_t *j, bool fg) {
 		else {
 			/* Background job */
 			tcsetpgrp(shell_terminal, shell_pgid);
-			/* Wait for the job to complete */
-			waitpid(pid, &status, WUNTRACED|WNOHANG);
-			p->status = status; 
-			if(WIFSTOPPED (status))
-			{
-				p->stopped = 1; 
-			}
-			else
-			{
-				p->completed = 1; 
-				if(WIFSIGNALED (status))
-				{
-				fprintf (stderr, "%d: Terminated by signal %d.\n",
-								  (int) pid, WTERMSIG (p->status));
-				}
-			}
+		
 		}
 	}
 }
+
+
 
 bool init_job(job_t *j) {
 	j->next = NULL;
@@ -773,6 +800,11 @@ bool invokefree(job_t *j, char *msg){
 		{
 			delete_job(jobs_job);
 		}	
+		pid_t pid; 
+		int status; 
+		do 
+			pid = waitpid (WAIT_ANY, &status, WUNTRACED|WNOHANG);
+       			while (!mark_process_status (pid, status));
 	}	
 }
 	
