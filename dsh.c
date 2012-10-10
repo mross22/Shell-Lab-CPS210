@@ -1,4 +1,4 @@
-#include <sys/types.h>
+#include <sys/types.h> 
 #include <termios.h>
 #include <unistd.h> /* getpid()*/
 #include <signal.h> /* signal name macros, and sig handlers*/
@@ -249,7 +249,7 @@ void spawn_job(job_t *j, bool fg) {
 			*/
 
 			/* execute the command through exec_ call */
-			fprintf(stdout, "Exec: %s", p->argv[0]); 
+			fprintf(stdout, "Exec: %s\n", p->argv[0]); 
 			execve(p->argv[0], p->argv, NULL);
 			perror("execve");
 			exit(1);
@@ -565,6 +565,20 @@ bool invokefree(job_t *j, char *msg){
 		return  prompt_pid;
 	}
 
+	int delete_job(job_t* job){
+		job_t* j;
+	
+		for(j=first_job; j ; j = j->next){
+			if(j->next == job){
+				j->next = j->next->next;
+				break;
+			}
+		}
+
+		free_job(job);
+		return 1;
+	}
+
 	int main() {
 
 		init_shell();
@@ -598,7 +612,8 @@ bool invokefree(job_t *j, char *msg){
 		//if(cur_job->commandinfo
 		job_t *j;
 		process_t *p;
-		bool isBuiltIn = false; 
+		bool isBuiltIn = false;
+		job_t *jobs_job =NULL; 
 		for(j = first_job; j; j = j->next) {
 			if(j->pgid < 0)
 			{
@@ -611,24 +626,30 @@ bool invokefree(job_t *j, char *msg){
 						job_t *j2;
 						int num = 1;
 						for(j2 = first_job; j2; j2 = j2->next) {
-							fprintf(stdout, "[%d]+ \t",j2->pgid);
-							// If all jobs are completed
-							if(job_is_completed(j2)){
-								fprintf(stdout, "Done");
-								free_job(j2);
-							}
-							// If all jobs are completed or stopped (thus if there are jobs that are stopped & not completed
-							else if(job_is_stopped(j2)){
-								fprintf(stdout, "Some stopped jobs");
+							// as long as the job you are processing is NOT this current 'jobs' command
+							if(j2 != j){
+								fprintf(stdout, "[%d]+ \t\t",j2->pgid);
+								// If all processes are completed
+								if(job_is_completed(j2)){
+									fprintf(stdout, "Done");
+									free_job(j2);
+								}
+								// If all processes are completed or stopped (thus if there are jobs that are stopped & not completed
+								else if(job_is_stopped(j2)){
+									fprintf(stdout, "Some stopped jobs");
+								}
+								else{
+									fprintf(stdout, "Running");
+								}
+
+								fprintf(stdout, "\t\t %s\n", j2->commandinfo);
+								num++;
 							}
 							else{
-								fprintf(stdout, "Running");
-							}
-
-							fprintf(stdout, "\t\t %s\n", j2->commandinfo);
-							num++;
-						}
-						
+								// processing current jobs command
+								jobs_job = j;
+							}							
+						} 
 						break;
 					}
 					else if(strcmp(p->argv[0], "fg") == 0){ 
@@ -650,12 +671,15 @@ bool invokefree(job_t *j, char *msg){
 						isBuiltIn = true; 
 						break;
 					} 
+
+				}
+				
 			//		fprintf(stdout,"cmd: %s\t", p->argv[0]);
 			//		int i;
 			//		for(i = 1; i < p->argc; i++) 
 			//			fprintf(stdout, "%s ", p->argv[i]);
 			//		fprintf(stdout, "\n");
-				}
+			
 			//	if(j->bg) fprintf(stdout, "Background job\n");	
 			//	else fprintf(stdout, "Foreground job\n");	
 			//	if(j->mystdin == INPUT_FD)
@@ -672,16 +696,23 @@ bool invokefree(job_t *j, char *msg){
 				// If running in the background
 				if(!isBuiltIn)
 				{
-				if(j->bg){
-					spawn_job(j, false);
-				}
-				// If running in the foreground
-				else{
-					spawn_job(j, true);
-				}
+					if(j->bg){
+						spawn_job(j, false);
+					}
+					// If running in the foreground
+					else{
+						spawn_job(j, true);
+					}
 				}
 			}
-			}	
 		}
-	}
+		
+		//this is where you delete jobs_job
+		if(jobs_job != NULL)
+		{
+			delete_job(jobs_job);
+		}	
+	}	
+}
+	
 
