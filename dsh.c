@@ -648,7 +648,7 @@ bool invokefree(job_t *j, char *msg){
 								if(job_is_completed(j2)){
 									fprintf(stdout, "Done");
 									fprintf(stdout, "\t\t %s\n", j2->commandinfo);
-									free_job(j2);
+									//free_job(j2);
 								}
 								// If all processes are completed or stopped (thus if there are jobs that are stopped & not completed
 								else if(job_is_stopped(j2)){
