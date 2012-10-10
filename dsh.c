@@ -641,6 +641,7 @@ bool invokefree(job_t *j, char *msg){
 						isBuiltIn = true; 
 						job_t *j2;
 						for(j2 = first_job; j2; j2 = j2->next) {
+<<<<<<< HEAD
 							// as long as the job you are processing is NOT this current 'jobs' command
 							if(j2 != j){
 								fprintf(stdout, "[%d]+ \t\t",j2->pgid);
