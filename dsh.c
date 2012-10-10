@@ -299,6 +299,23 @@ void spawn_job(job_t *j, bool fg) {
 		else {
 			/* Background job */
 			tcsetpgrp(shell_terminal, shell_pgid);
+			
+			/* Wait for the job to complete */
+			waitpid(pid, &status, 0);
+			p->status = status; 
+			if(WIFSTOPPED (status))
+			{
+				p->stopped = 1; 
+			}
+			else
+			{
+				p->completed = 1; 
+				if(WIFSIGNALED (status))
+				{
+				fprintf (stderr, "%d: Terminated by signal %d.\n",
+								  (int) pid, WTERMSIG (p->status));
+				}
+			}
 		}
 	}
 }
@@ -641,7 +658,6 @@ bool invokefree(job_t *j, char *msg){
 						isBuiltIn = true; 
 						job_t *j2;
 						for(j2 = first_job; j2; j2 = j2->next) {
-<<<<<<< HEAD
 							// as long as the job you are processing is NOT this current 'jobs' command
 							if(j2 != j){
 								fprintf(stdout, "[%d]+ \t\t",j2->pgid);
