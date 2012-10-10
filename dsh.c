@@ -604,9 +604,10 @@ bool invokefree(job_t *j, char *msg){
 			{
 				//fprintf(stdout, "job: %s\n", j->commandinfo);
 				for(p = j->first_process; p; p = p->next) {
-					isBuiltIn = true; 					
+										
 					if(strcmp(p->argv[0], "jobs") == 0)
 					{
+						isBuiltIn = true; 
 						job_t *j2;
 						int num = 1;
 						for(j2 = first_job; j2; j2 = j2->next) {
@@ -628,25 +629,27 @@ bool invokefree(job_t *j, char *msg){
 							num++;
 						}
 						
-						continue;
+						break;
 					}
 					else if(strcmp(p->argv[0], "fg") == 0){ 
+						isBuiltIn = true; 
 						tcsetpgrp (shell_terminal, j->pgid); 
 	//					wait_for_job (j); 
 
 						tcsetpgrp (shell_terminal, shell_pgid);
 						tcgetattr (shell_terminal, &j->tmodes);
 						tcsetattr (shell_terminal, TCSADRAIN, &shell_tmodes); 					
-						continue;
+						break;
 					}
 					else if(strcmp(p->argv[0], "bg") == 0){ 
+						isBuiltIn = true; 
 						j->bg = true; 						
-						continue;
+						break;
 					}
 					else if(strcmp(p->argv[0], "cd") == 0){
-						continue;
-					}
-					isBuiltIn = false; 
+						isBuiltIn = true; 
+						break;
+					} 
 			//		fprintf(stdout,"cmd: %s\t", p->argv[0]);
 			//		int i;
 			//		for(i = 1; i < p->argc; i++) 
@@ -677,6 +680,7 @@ bool invokefree(job_t *j, char *msg){
 					spawn_job(j, true);
 				}
 				}
+			}
 			}	
 		}
 	}
