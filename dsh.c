@@ -770,7 +770,8 @@ bool invokefree(job_t *j, char *msg){
 							tcgetattr (shell_terminal, &j->tmodes);
 							tcsetattr (shell_terminal, TCSADRAIN, &shell_tmodes); 	
 							break;
-					 	}				
+					 	}	
+			
 						pid_t currPgid = intpgid; 
 						
 						job_t *m; 
