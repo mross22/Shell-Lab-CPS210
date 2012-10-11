@@ -649,6 +649,7 @@ bool invokefree(job_t *j, char *msg){
 	int delete_job(job_t* job){
 		job_t* j;
 
+		
 		if(job != NULL){	
 			if(job == first_job){
 				first_job = first_job->next;
@@ -661,6 +662,7 @@ bool invokefree(job_t *j, char *msg){
 					}
 				}
 			}
+
 
 			free_job(job);
 			return 0;
@@ -787,7 +789,7 @@ bool invokefree(job_t *j, char *msg){
 						job_t *m; 
 						for(m = first_job; m; m = m->next)
 						{
-							if(m->pgid = currPgid)
+							if(m->pgid == currPgid)
 							{
 								tcsetpgrp (shell_terminal, m->pgid);								
 								finishFGJob(m); 
