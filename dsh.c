@@ -759,9 +759,16 @@ bool invokefree(job_t *j, char *msg){
 					}
 					else if(strcmp(p->argv[0], "fg") == 0){ 
 						isBuiltIn = true; 
-						fg_job = j;	
-					
-						int intpgid = atoi(p->argv[1]);						
+						fg_job = j;
+						int intpgid; 	
+						if(p->argv[1] != NULL)
+							intpgid = atoi(p->argv[1]);	
+						else{
+							fprintf(stderr, "Forgot pgid for fg (job)");
+							tcsetpgrp (shell_terminal, shell_pgid);
+							tcgetattr (shell_terminal, &j->tmodes);
+							tcsetattr (shell_terminal, TCSADRAIN, &shell_tmodes); 	
+							break; 	}				
 						pid_t currPgid = intpgid; 
 						
 						job_t *m; 
