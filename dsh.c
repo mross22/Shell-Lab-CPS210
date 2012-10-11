@@ -357,7 +357,6 @@ void spawn_job(job_t *j, bool fg) {
 		}
 		input = mypipe[0];
 
-
 		if(fg){
 			/* Wait for the job to complete */
 			waitpid(pid, &status, WUNTRACED);
