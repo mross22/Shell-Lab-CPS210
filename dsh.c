@@ -714,13 +714,8 @@ bool invokefree(job_t *j, char *msg){
      }
 
 	int main() {
- 
-		//FILE *f = fopen("logfile.log"); 
-		int fd = open ("logfile.log", O_TRUNC | O_CREAT | O_WRONLY, 0666);	
+		int fd = open ("dsh.log", O_TRUNC | O_CREAT | O_WRONLY, 0666);	
 		dup2(fd, 2); 
-		//dup2(fd, 0); 
-
-		 
 		
 		init_shell();
 
@@ -738,23 +733,17 @@ bool invokefree(job_t *j, char *msg){
 
 		/* Your code goes here */
 		/* You need to loop through jobs list since a command line can contain ;*/
-		/*
-		job_t *first_job = NULL;
 		
-		job_t *cur_job = first_job;
-		if(cur_job != NULL){
-			while(cur_job->next != NULL){
-
-			}	
-		}
-		*/
 		/* Check for built-in commands */
 		// jobs, fg, bg, cd
-		//if(cur_job->commandinfo
+		
 		job_t *j;
 		process_t *p;
 		bool isBuiltIn = false;
 		job_t *jobs_job =NULL; 
+		job_t *fg_job = NULL;
+		job_t *bg_job = NULL;
+		job_t *cd_job = NULL;
 		for(j = first_job; j; j = j->next) {
 			if(j->pgid < 0)
 			{
@@ -805,7 +794,8 @@ bool invokefree(job_t *j, char *msg){
 					}
 					else if(strcmp(p->argv[0], "fg") == 0){ 
 						isBuiltIn = true; 
-						
+						fg_job = j;	
+					
 						int intpgid = atoi(p->argv[1]);						
 						pid_t currPgid = intpgid; 
 						
@@ -828,34 +818,19 @@ bool invokefree(job_t *j, char *msg){
 					}
 					else if(strcmp(p->argv[0], "bg") == 0){ 
 						isBuiltIn = true; 
-						j->bg = true; 						
+						j->bg = true;
+						bg_job = j; 						
 						break;
 					}
 					else if(strcmp(p->argv[0], "cd") == 0){
 						isBuiltIn = true; 
+						cd_job = j;
+						if(chdir(p->argv[1]) < 0){
+							perror("chdir error");
+						}
 						break;
 					} 
-
 				}
-
-			//		fprintf(stdout,"cmd: %s\t", p->argv[0]);
-			//		int i;
-			//		for(i = 1; i < p->argc; i++) 
-			//			fprintf(stdout, "%s ", p->argv[i]);
-			//		fprintf(stdout, "\n");
-
-			//	if(j->bg) fprintf(stdout, "Background job\n");	
-			//	else fprintf(stdout, "Foreground job\n");	
-			//	if(j->mystdin == INPUT_FD)
-			//		fprintf(stdout, "Input file name: %s\n", j->ifile);
-			//	if(j->mystdout == OUTPUT_FD)
-			//		fprintf(stdout, "Output file name: %s\n", j->ofile);
-
-				/* If not built-in */
-				/* If job j runs in foreground */
-				/* spawn_job(j,true) */
-				/* else */
-				/* spawn_job(j,false) */
 
 				// If running in the background
 				if(!isBuiltIn)
@@ -876,6 +851,19 @@ bool invokefree(job_t *j, char *msg){
 		{
 			delete_job(jobs_job);
 		}	
+		if(fg_job !=NULL)
+		{
+			delete_job(fg_job);
+		}
+		if(bg_job != NULL)
+		{
+			delete_job(bg_job);
+		}
+		if(cd_job != NULL)
+		{
+			delete_job(cd_job);
+		}
+
 		pid_t pid; 
 		int status; 
 		do 
