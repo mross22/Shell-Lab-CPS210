@@ -1,3 +1,4 @@
+#include <fcntl.h>
 #include <features.h>
 #include <termios.h>
 #include <unistd.h> /* getpid()*/
@@ -202,24 +203,50 @@ void spawn_job(job_t *j, bool fg) {
 	process_t *p;
 	int status;	
 
-	int mypipe[2], infile, outfile;
-
+	int mypipe[2];
+	
 	/* Check for input/output redirection; If present, set the IO descriptors 
 	 * to the appropriate files given by the user 
 	 */
 	// are mystdin, mystdout, mystderr initialized to 0,1,2 ??
+	int input;
+	int output;
+	// Initialize job mystdin, mystdout, mystderr
+	j->mystdin = STDIN_FILENO;
+	j->mystdout = STDOUT_FILENO;
+	j->mystderr = STDERR_FILENO;
 	
-	infile=  STDIN_FILENO;
-	outfile = STDOUT_FILENO;
+	int save_in = dup(STDIN_FILENO);
+	int save_out = dup(STDOUT_FILENO);
+	int save_redirect_out = -1;
+
+	if(j->ifile != NULL)
+	{
+		input = open(j->ifile, O_RDONLY); 
+		dup2(input, j->mystdin);
+	}	
+	if(j->ofile != NULL){
+		output = open(j->ofile, O_TRUNC | O_CREAT | O_WRONLY, 0666);
+		save_redirect_out = dup(output);
+		dup2(output, j->mystdout);
+	}
+	
+	
+	/*	
+	//infile=  STDIN_FILENO;
+	//outfile = STDOUT_FILENO;
 	if(j->ifile != NULL){
 		FILE *instream;
 		instream = fopen(j->ifile, "r");
 		infile = fileno(instream);
-		dup2(infile, j->mystdin);	
+	//	dup2(input_file, j->mystdin);	
+		dup2(infile, j->mystdin);
 	}
 	else{
+	//	input_file = j->mystdin;
 		infile = j->mystdin;
 	}
+*/
 /*
 	if(j->ofile != NULL){
 		FILE *ostream;
@@ -251,11 +278,16 @@ void spawn_job(job_t *j, bool fg) {
 				exit(1);
 			}
 			
-			outfile = mypipe[1];
+			output = mypipe[1];
 		}
-		else
-			outfile = j->mystdout;
-		
+		else{
+			if(save_redirect_out > 0){
+				output = save_redirect_out;
+			}
+			else{
+				output = j->mystdout;
+			}
+		}
 		switch (pid = fork()) {
 
 		   case -1: /* fork failure */
@@ -279,16 +311,19 @@ void spawn_job(job_t *j, bool fg) {
 			signal(SIGTTOU, SIG_DFL);
 
 			// Set-up appropriate I/O
-			if(infile != j->mystdin)
+			if(input != j->mystdin)
 			{
-				dup2(infile, j->mystdin);
-				close(infile);
+				dup2(input, j->mystdin);
+				close(input);
 			}
-			if(outfile != j->mystdout){
-				dup2(outfile, j->mystdout);
-				close(outfile);
+			if(output != j->mystdout){
+				dup2(output, j->mystdout);
+				close(output);
 			}	
 
+		//	if(input != j->mystdin){
+		//		close(input);
+		//	}
 			/* execute the command through exec_ call */
 		//	fprintf(stdout, "Exec: %s\n", p->argv[0]); 
 			//char* env[4] = {"/bin\0","/usr/bin\0","/usr/local/bin\0", NULL};
@@ -304,40 +339,25 @@ void spawn_job(job_t *j, bool fg) {
 				j->pgid = pid;
 			setpgid(pid, j->pgid);
 
+			//close(input);
 		}
 
 		/* Reset file IOs if necessary */
 		// Clean up pipes
-		if(infile != j->mystdin){
-			close(infile);
+		//if(infile != j->mystdin){
+		if(input != j->mystdin){
+			close(input);
 		}
-		if(outfile != j->mystdout){
-			close(outfile);
+		//if(outfile != j->mystdout){
+		if(output != j->mystdout){
+			close(output);
 		}
-		infile = mypipe[0];
-		
+
+		input = mypipe[0];
+
 
 		if(fg){
 			/* Wait for the job to complete */
-/*
-			waitpid(pid, &status, 0);
-			p->status = status; 
-			if(WIFSTOPPED (status))
-			{
-				p->stopped = 1; 
-			}
-			else
-			{
-				p->completed = 1; 
-				if(WIFSIGNALED (status))
-				{
-				fprintf (stderr, "%d: Terminated by signal %d.\n",
-								  (int) pid, WTERMSIG (p->status));
-				}
-			}
-			
-			tcsetpgrp(shell_terminal,shell_pgid); 
-*/
 			waitpid(pid, &status, WUNTRACED);
 			p->status = status; 
 			if(WIFSTOPPED (status))
@@ -354,12 +374,14 @@ void spawn_job(job_t *j, bool fg) {
 				}
 			}
 			
+			// Reset correct I/O for terminal
+			dup2(save_in, STDIN_FILENO);	
+			dup2(save_out, STDOUT_FILENO);
 			tcsetpgrp(shell_terminal,shell_pgid); 
 		}
 		else {
 			/* Background job */
 			tcsetpgrp(shell_terminal, shell_pgid);
-		
 		}
 	}
 }
