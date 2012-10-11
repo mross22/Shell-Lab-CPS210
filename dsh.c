@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-=======
-#include <features.h>
->>>>>>> a6d20e8b91ff9ba41719fbf7b311b0d71d5f986c
 #include <termios.h>
 #include <unistd.h> /* getpid()*/
 #include <signal.h> /* signal name macros, and sig handlers*/
@@ -214,11 +210,7 @@ void spawn_job(job_t *j, bool fg) {
 	 * to the appropriate files given by the user 
 	 */
 	// are mystdin, mystdout, mystderr initialized to 0,1,2 ??
-<<<<<<< HEAD
 
-=======
-	
->>>>>>> a6d20e8b91ff9ba41719fbf7b311b0d71d5f986c
 	infile=  STDIN_FILENO;
 	outfile = STDOUT_FILENO;
 	if(j->ifile != NULL){
@@ -656,15 +648,12 @@ bool invokefree(job_t *j, char *msg){
 
 	int delete_job(job_t* job){
 		job_t* j;
-<<<<<<< HEAD
 
-=======
->>>>>>> a6d20e8b91ff9ba41719fbf7b311b0d71d5f986c
 		
 		if(job != NULL){	
 			if(job == first_job){
 				first_job = first_job->next;
-<<<<<<< HEAD
+
 			}
 			else{
 				for(j=first_job; j ; j = j->next){
@@ -675,17 +664,6 @@ bool invokefree(job_t *j, char *msg){
 				}
 			}
 
-=======
-			}
-			else{
-				for(j=first_job; j ; j = j->next){
-					if(j->next == job){
-						j->next = j->next->next;
-						break;
-					}
-				}
-			}
->>>>>>> a6d20e8b91ff9ba41719fbf7b311b0d71d5f986c
 
 			free_job(job);
 			return 0;
