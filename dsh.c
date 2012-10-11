@@ -760,7 +760,7 @@ bool invokefree(job_t *j, char *msg){
 					else if(strcmp(p->argv[0], "fg") == 0){ 
 						isBuiltIn = true; 
 						fg_job = j;	
-					
+						
 						int intpgid = atoi(p->argv[1]);						
 						pid_t currPgid = intpgid; 
 						
