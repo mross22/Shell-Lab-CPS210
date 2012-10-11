@@ -1,5 +1,4 @@
 #include <fcntl.h>
-#include <features.h>
 #include <termios.h>
 #include <unistd.h> /* getpid()*/
 #include <signal.h> /* signal name macros, and sig handlers*/
@@ -7,6 +6,8 @@
 #include <errno.h> /* for errno */
 #include <sys/wait.h> /* for WAIT_ANY */
 #include <string.h>
+#include <syslog.h>
+#include <fcntl.h>
 
 #include "dsh.h"
 
@@ -26,6 +27,7 @@ job_t * find_job(pid_t pgid);
 int job_is_stopped(job_t *j);
 int job_is_completed(job_t *j);
 bool free_job(job_t *j);
+
 
 char prompt_pid[32];
 
@@ -260,7 +262,7 @@ void spawn_job(job_t *j, bool fg) {
 */	
 
 	/* A job can contain a pipeline; Loop through process and set up pipes accordingly */
-	
+
 	/* For each command (process), fork to create a new process context, 
 	 * set the process group, and execute the command 
          */ 	
@@ -288,6 +290,7 @@ void spawn_job(job_t *j, bool fg) {
 				output = j->mystdout;
 			}
 		}
+
 		switch (pid = fork()) {
 
 		   case -1: /* fork failure */
@@ -352,7 +355,6 @@ void spawn_job(job_t *j, bool fg) {
 		if(output != j->mystdout){
 			close(output);
 		}
-
 		input = mypipe[0];
 
 
@@ -377,6 +379,7 @@ void spawn_job(job_t *j, bool fg) {
 			// Reset correct I/O for terminal
 			dup2(save_in, STDIN_FILENO);	
 			dup2(save_out, STDOUT_FILENO);
+
 			tcsetpgrp(shell_terminal,shell_pgid); 
 		}
 		else {
@@ -411,7 +414,7 @@ bool init_process(process_t *p) {
 	p->status = -1; /* set by waitpid */
 	p->argc = 0;
 	p->next = NULL;
-	
+
         if(!(p->argv = (char **)calloc(MAX_ARGS,sizeof(char *))))
                 return false;
 
@@ -424,11 +427,11 @@ bool readprocessinfo(process_t *p, char *cmd) {
 	int args_pos = 0; /* iterator for arguments*/
 
 	int argc = 0;
-	
+
 	while (isspace(cmd[cmd_pos])){++cmd_pos;} /* ignore any spaces */
 	if(cmd[cmd_pos] == '\0')
 		return true;
-	
+
 	while(cmd[cmd_pos] != '\0'){
 		if(!(p->argv[argc] = (char *)calloc(MAX_LEN_CMDLINE, sizeof(char))))
 			return false;
@@ -560,7 +563,7 @@ bool invokefree(job_t *j, char *msg){
 					}
 					valid_input = false;
 					break;
-				
+
 				    case '>': /* output redirection */
 					current_job->ofile = (char *) calloc(MAX_LEN_FILENAME, sizeof(char));
 					if(!current_job->ofile)
@@ -606,8 +609,8 @@ bool invokefree(job_t *j, char *msg){
 				   case '&': /* background job */
 					current_job->bg = true;
 					while (isspace(cmdline[cmdline_pos])){++cmdline_pos;} /* ignore any spaces */
-					if(cmdline[cmdline_pos+1] != '\n' && cmdline[cmdline_pos+1] != '\0')
-						fprintf(stderr, "reading bg: extra input ignored");
+					if(cmdline[cmdline_pos+1] != '\n' && cmdline[cmdline_pos+1] != '\0'){						
+						fprintf(stderr, "reading bg: extra input ignored");}
 					end_of_input = true;
 					break;
 
@@ -660,7 +663,7 @@ bool invokefree(job_t *j, char *msg){
 	/* Build prompt messaage; Change this to include process ID (pid)*/
 	char* promptmsg() {
 		pid_t pid;	
-		
+
 		pid = getpid();
 		sprintf(prompt_pid, "dsh_%d$ ", pid); 	
 		return  prompt_pid;
@@ -668,10 +671,12 @@ bool invokefree(job_t *j, char *msg){
 
 	int delete_job(job_t* job){
 		job_t* j;
+
 		
 		if(job != NULL){	
 			if(job == first_job){
 				first_job = first_job->next;
+
 			}
 			else{
 				for(j=first_job; j ; j = j->next){
@@ -682,15 +687,42 @@ bool invokefree(job_t *j, char *msg){
 				}
 			}
 
+
 			free_job(job);
 			return 0;
 		}
 
 		return -1;
 	}
+//=============================
+
+
+
+
+
+
+//=============================
+	void finishFGJob (job_t *j)
+     {
+       int status;
+       pid_t pid;
+     
+	do
+         pid = waitpid (WAIT_ANY, &status, WUNTRACED);
+       while (!mark_process_status (pid, status)
+              && !job_is_stopped (j)
+              && !job_is_completed (j));
+     }
 
 	int main() {
+ 
+		//FILE *f = fopen("logfile.log"); 
+		int fd = open ("logfile.log", O_TRUNC | O_CREAT | O_WRONLY, 0666);	
+		dup2(fd, 2); 
+		//dup2(fd, 0); 
 
+		 
+		
 		init_shell();
 
 		while(1) {
@@ -729,7 +761,7 @@ bool invokefree(job_t *j, char *msg){
 			{
 				//fprintf(stdout, "job: %s\n", j->commandinfo);
 				for(p = j->first_process; p; p = p->next) {
-										
+
 					if(strcmp(p->argv[0], "jobs") == 0)
 					{
 						isBuiltIn = true; 
@@ -774,8 +806,21 @@ bool invokefree(job_t *j, char *msg){
 					}
 					else if(strcmp(p->argv[0], "fg") == 0){ 
 						isBuiltIn = true; 
-						tcsetpgrp (shell_terminal, j->pgid); 
-	//					wait_for_job (j); 
+						
+						int intpgid = atoi(p->argv[1]);						
+						pid_t currPgid = intpgid; 
+						
+						job_t *m; 
+						for(m = first_job; m; m = m->next)
+						{
+							if(m->pgid == currPgid)
+							{
+								tcsetpgrp (shell_terminal, m->pgid);								
+								finishFGJob(m); 
+								break; 
+							}
+			
+						} 
 
 						tcsetpgrp (shell_terminal, shell_pgid);
 						tcgetattr (shell_terminal, &j->tmodes);
@@ -793,20 +838,20 @@ bool invokefree(job_t *j, char *msg){
 					} 
 
 				}
-				
+
 			//		fprintf(stdout,"cmd: %s\t", p->argv[0]);
 			//		int i;
 			//		for(i = 1; i < p->argc; i++) 
 			//			fprintf(stdout, "%s ", p->argv[i]);
 			//		fprintf(stdout, "\n");
-			
+
 			//	if(j->bg) fprintf(stdout, "Background job\n");	
 			//	else fprintf(stdout, "Foreground job\n");	
 			//	if(j->mystdin == INPUT_FD)
 			//		fprintf(stdout, "Input file name: %s\n", j->ifile);
 			//	if(j->mystdout == OUTPUT_FD)
 			//		fprintf(stdout, "Output file name: %s\n", j->ofile);
-			
+
 				/* If not built-in */
 				/* If job j runs in foreground */
 				/* spawn_job(j,true) */
@@ -826,7 +871,7 @@ bool invokefree(job_t *j, char *msg){
 				}
 			}
 		}
-		
+
 		//this is where you delete jobs_job
 		if(jobs_job != NULL)
 		{
@@ -838,6 +883,5 @@ bool invokefree(job_t *j, char *msg){
 			pid = waitpid (WAIT_ANY, &status, WUNTRACED|WNOHANG);
        			while (!mark_process_status (pid, status));
 	}	
+	closelog(); 
 }
-	
-
