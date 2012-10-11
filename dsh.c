@@ -233,34 +233,6 @@ void spawn_job(job_t *j, bool fg) {
 		dup2(output, j->mystdout);
 	}
 	
-	
-	/*	
-	//infile=  STDIN_FILENO;
-	//outfile = STDOUT_FILENO;
-	if(j->ifile != NULL){
-		FILE *instream;
-		instream = fopen(j->ifile, "r");
-		infile = fileno(instream);
-	//	dup2(input_file, j->mystdin);	
-		dup2(infile, j->mystdin);
-	}
-	else{
-	//	input_file = j->mystdin;
-		infile = j->mystdin;
-	}
-*/
-/*
-	if(j->ofile != NULL){
-		FILE *ostream;
-		ostream = fopen(j->ofile, "a+");
-		output = fileno(ostream);
-		dup2(output, j->mystdout);
-	}
-	else{
-		output = j->mystdout;
-	}
-*/	
-
 	/* A job can contain a pipeline; Loop through process and set up pipes accordingly */
 
 	/* For each command (process), fork to create a new process context, 
@@ -273,7 +245,7 @@ void spawn_job(job_t *j, bool fg) {
 	// output for pipes and when you fork the final process, redirect to the overall output file
 	//infile = j->mystdin;
 	for(p = j->first_process; p; p = p->next) {
-		// Set up pipes if necessary
+		// If there is a next process, configure pipes 
 		if(p->next){
 			if(pipe(mypipe) < 0){
 				perror("pipe");
@@ -283,6 +255,7 @@ void spawn_job(job_t *j, bool fg) {
 			output = mypipe[1];
 		}
 		else{
+			// There is no next process so route the output of this process to the ofile for the job
 			if(save_redirect_out > 0){
 				output = save_redirect_out;
 			}
@@ -324,13 +297,7 @@ void spawn_job(job_t *j, bool fg) {
 				close(output);
 			}	
 
-		//	if(input != j->mystdin){
-		//		close(input);
-		//	}
 			/* execute the command through exec_ call */
-		//	fprintf(stdout, "Exec: %s\n", p->argv[0]); 
-			//char* env[4] = {"/bin\0","/usr/bin\0","/usr/local/bin\0", NULL};
-			//execvpe(p->argv[0], p->argv, env);
 			execve(p->argv[0], p->argv, NULL);
 			exit(1);
 
@@ -341,17 +308,12 @@ void spawn_job(job_t *j, bool fg) {
 			if (j->pgid <= 0)
 				j->pgid = pid;
 			setpgid(pid, j->pgid);
-
-			//close(input);
 		}
 
 		/* Reset file IOs if necessary */
-		// Clean up pipes
-		//if(infile != j->mystdin){
 		if(input != j->mystdin){
 			close(input);
 		}
-		//if(outfile != j->mystdout){
 		if(output != j->mystdout){
 			close(output);
 		}
@@ -383,6 +345,9 @@ void spawn_job(job_t *j, bool fg) {
 		}
 		else {
 			/* Background job */
+			dup2(save_in, STDIN_FILENO);	
+			dup2(save_out, STDOUT_FILENO);
+
 			tcsetpgrp(shell_terminal, shell_pgid);
 		}
 	}
