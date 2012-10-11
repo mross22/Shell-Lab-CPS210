@@ -1,3 +1,4 @@
+#include <features.h>
 #include <sys/types.h> 
 #include <termios.h>
 #include <unistd.h> /* getpid()*/
@@ -146,6 +147,45 @@ void continue_job(job_t *j) {
 }
 
 
+int
+     mark_process_status (pid_t pid, int status)
+     {
+       job_t *j;
+       process_t *p;
+     
+       if (pid > 0)
+         {
+           /* Update the record for the process.  */
+           for (j = first_job; j; j = j->next)
+             for (p = j->first_process; p; p = p->next)
+               if (p->pid == pid)
+                 {
+                   p->status = status;
+                   if (WIFSTOPPED (status))
+                     p->stopped = 1;
+                   else
+                     {
+                       p->completed = 1;
+                       if (WIFSIGNALED (status))
+                         fprintf (stderr, "%d: Terminated by signal %d.\n",
+                                  (int) pid, WTERMSIG (p->status));
+                     }
+                   return 0;
+                  }
+           fprintf (stderr, "No child process %d.\n", pid);
+           return -1;
+         }
+       else if (pid == 0 || errno == ECHILD)
+         /* No processes ready to report.  */
+         return -1;
+       else {
+         /* Other weird errors.  */
+         perror ("waitpid");
+         return -1;
+       }
+     }
+
+
 /* Spawning a process with job control. fg is true if the 
  * newly-created process is to be placed in the foreground. 
  * (This implicitly puts the calling process in the background, 
@@ -155,6 +195,7 @@ void continue_job(job_t *j) {
  * pgid: this feature is used to start the second or 
  * subsequent processes in a pipeline.
  * */
+
 
 void spawn_job(job_t *j, bool fg) {
 
@@ -193,7 +234,7 @@ void spawn_job(job_t *j, bool fg) {
 
 
 	/* A job can contain a pipeline; Loop through process and set up pipes accordingly */
-
+	
 	/* For each command (process), fork to create a new process context, 
 	 * set the process group, and execute the command 
          */ 	
@@ -210,12 +251,12 @@ void spawn_job(job_t *j, bool fg) {
 				perror("pipe");
 				exit(1);
 			}
-
+			
 			outfile = mypipe[1];
 		}
 		else
 			outfile = j->mystdout;
-
+		
 		switch (pid = fork()) {
 
 		   case -1: /* fork failure */
@@ -251,8 +292,9 @@ void spawn_job(job_t *j, bool fg) {
 
 			/* execute the command through exec_ call */
 			fprintf(stdout, "Exec: %s\n", p->argv[0]); 
+			//char* env[4] = {"/bin\0","/usr/bin\0","/usr/local/bin\0", NULL};
+			//execvpe(p->argv[0], p->argv, env);
 			execve(p->argv[0], p->argv, NULL);
-			perror("execve");
 			exit(1);
 
 		   default: /* parent */
@@ -274,7 +316,7 @@ void spawn_job(job_t *j, bool fg) {
 			close(outfile);
 		}
 		infile = mypipe[0];
-
+		
 
 		if(fg){
 			/* Wait for the job to complete */
@@ -312,31 +354,18 @@ void spawn_job(job_t *j, bool fg) {
 								  (int) pid, WTERMSIG (p->status));
 				}
 			}
-
+			
 			tcsetpgrp(shell_terminal,shell_pgid); 
 		}
 		else {
 			/* Background job */
 			tcsetpgrp(shell_terminal, shell_pgid);
-			/* Wait for the job to complete */
-			waitpid(pid, &status, WUNTRACED|WNOHANG);
-			p->status = status; 
-			if(WIFSTOPPED (status))
-			{
-				p->stopped = 1; 
-			}
-			else
-			{
-				p->completed = 1; 
-				if(WIFSIGNALED (status))
-				{
-				fprintf (stderr, "%d: Terminated by signal %d.\n",
-								  (int) pid, WTERMSIG (p->status));
-				}
-			}
+		
 		}
 	}
 }
+
+
 
 bool init_job(job_t *j) {
 	j->next = NULL;
@@ -361,7 +390,7 @@ bool init_process(process_t *p) {
 	p->status = -1; /* set by waitpid */
 	p->argc = 0;
 	p->next = NULL;
-
+	
         if(!(p->argv = (char **)calloc(MAX_ARGS,sizeof(char *))))
                 return false;
 
@@ -374,11 +403,11 @@ bool readprocessinfo(process_t *p, char *cmd) {
 	int args_pos = 0; /* iterator for arguments*/
 
 	int argc = 0;
-
+	
 	while (isspace(cmd[cmd_pos])){++cmd_pos;} /* ignore any spaces */
 	if(cmd[cmd_pos] == '\0')
 		return true;
-
+	
 	while(cmd[cmd_pos] != '\0'){
 		if(!(p->argv[argc] = (char *)calloc(MAX_LEN_CMDLINE, sizeof(char))))
 			return false;
@@ -510,7 +539,7 @@ bool invokefree(job_t *j, char *msg){
 					}
 					valid_input = false;
 					break;
-
+				
 				    case '>': /* output redirection */
 					current_job->ofile = (char *) calloc(MAX_LEN_FILENAME, sizeof(char));
 					if(!current_job->ofile)
@@ -610,7 +639,7 @@ bool invokefree(job_t *j, char *msg){
 	/* Build prompt messaage; Change this to include process ID (pid)*/
 	char* promptmsg() {
 		pid_t pid;	
-
+		
 		pid = getpid();
 		sprintf(prompt_pid, "dsh_%d$ ", pid); 	
 		return  prompt_pid;
@@ -618,7 +647,7 @@ bool invokefree(job_t *j, char *msg){
 
 	int delete_job(job_t* job){
 		job_t* j;
-
+	
 		for(j=first_job; j ; j = j->next){
 			if(j->next == job){
 				j->next = j->next->next;
@@ -670,7 +699,7 @@ bool invokefree(job_t *j, char *msg){
 			{
 				//fprintf(stdout, "job: %s\n", j->commandinfo);
 				for(p = j->first_process; p; p = p->next) {
-
+										
 					if(strcmp(p->argv[0], "jobs") == 0)
 					{
 						isBuiltIn = true; 
@@ -734,20 +763,20 @@ bool invokefree(job_t *j, char *msg){
 					} 
 
 				}
-
+				
 			//		fprintf(stdout,"cmd: %s\t", p->argv[0]);
 			//		int i;
 			//		for(i = 1; i < p->argc; i++) 
 			//			fprintf(stdout, "%s ", p->argv[i]);
 			//		fprintf(stdout, "\n");
-
+			
 			//	if(j->bg) fprintf(stdout, "Background job\n");	
 			//	else fprintf(stdout, "Foreground job\n");	
 			//	if(j->mystdin == INPUT_FD)
 			//		fprintf(stdout, "Input file name: %s\n", j->ifile);
 			//	if(j->mystdout == OUTPUT_FD)
 			//		fprintf(stdout, "Output file name: %s\n", j->ofile);
-
+			
 				/* If not built-in */
 				/* If job j runs in foreground */
 				/* spawn_job(j,true) */
@@ -767,11 +796,18 @@ bool invokefree(job_t *j, char *msg){
 				}
 			}
 		}
-
+		
 		//this is where you delete jobs_job
 		if(jobs_job != NULL)
 		{
 			delete_job(jobs_job);
 		}	
+		pid_t pid; 
+		int status; 
+		do 
+			pid = waitpid (WAIT_ANY, &status, WUNTRACED|WNOHANG);
+       			while (!mark_process_status (pid, status));
 	}	
 }
+	
+
