@@ -1,5 +1,4 @@
 #include <features.h>
-#include <sys/types.h> 
 #include <termios.h>
 #include <unistd.h> /* getpid()*/
 #include <signal.h> /* signal name macros, and sig handlers*/
@@ -209,18 +208,19 @@ void spawn_job(job_t *j, bool fg) {
 	 * to the appropriate files given by the user 
 	 */
 	// are mystdin, mystdout, mystderr initialized to 0,1,2 ??
-	/*input =  STDIN_FILENO;
-	output = STDOUT_FILENO;
+	
+	infile=  STDIN_FILENO;
+	outfile = STDOUT_FILENO;
 	if(j->ifile != NULL){
-		FILE *istream;
-		istream = fopen(j->ifile, "r");
-		infile = fileno(istream);
-		dup2(input, j->mystdin);	
+		FILE *instream;
+		instream = fopen(j->ifile, "r");
+		infile = fileno(instream);
+		dup2(infile, j->mystdin);	
 	}
 	else{
-		input = j->mystdin;
+		infile = j->mystdin;
 	}
-
+/*
 	if(j->ofile != NULL){
 		FILE *ostream;
 		ostream = fopen(j->ofile, "a+");
@@ -230,8 +230,7 @@ void spawn_job(job_t *j, bool fg) {
 	else{
 		output = j->mystdout;
 	}
-	*/
-
+*/	
 
 	/* A job can contain a pipeline; Loop through process and set up pipes accordingly */
 	
@@ -243,7 +242,7 @@ void spawn_job(job_t *j, bool fg) {
 	// each process has its own file table, thus when you call dup2 inside a process, you 
 	// overwrite a mapping for that process only, thus call dup2 while inside the child to redirect
 	// output for pipes and when you fork the final process, redirect to the overall output file
-	infile = j->mystdin;
+	//infile = j->mystdin;
 	for(p = j->first_process; p; p = p->next) {
 		// Set up pipes if necessary
 		if(p->next){
@@ -291,7 +290,7 @@ void spawn_job(job_t *j, bool fg) {
 			}	
 
 			/* execute the command through exec_ call */
-			fprintf(stdout, "Exec: %s\n", p->argv[0]); 
+		//	fprintf(stdout, "Exec: %s\n", p->argv[0]); 
 			//char* env[4] = {"/bin\0","/usr/bin\0","/usr/local/bin\0", NULL};
 			//execvpe(p->argv[0], p->argv, env);
 			execve(p->argv[0], p->argv, NULL);
@@ -647,16 +646,25 @@ bool invokefree(job_t *j, char *msg){
 
 	int delete_job(job_t* job){
 		job_t* j;
-	
-		for(j=first_job; j ; j = j->next){
-			if(j->next == job){
-				j->next = j->next->next;
-				break;
+		
+		if(job != NULL){	
+			if(job == first_job){
+				first_job = first_job->next;
 			}
+			else{
+				for(j=first_job; j ; j = j->next){
+					if(j->next == job){
+						j->next = j->next->next;
+						break;
+					}
+				}
+			}
+
+			free_job(job);
+			return 0;
 		}
 
-		free_job(job);
-		return 1;
+		return -1;
 	}
 
 	int main() {
@@ -718,7 +726,7 @@ bool invokefree(job_t *j, char *msg){
 								}
 								// If all processes are completed or stopped (thus if there are jobs that are stopped & not completed
 								else if(job_is_stopped(j2)){
-									fprintf(stdout, "Some stopped jobs");
+									fprintf(stdout, "Stopped");
 									fprintf(stdout, "\t\t %s\n", j2->commandinfo);
 								}
 								else{
